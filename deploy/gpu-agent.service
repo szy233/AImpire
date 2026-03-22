@@ -1,0 +1,16 @@
+[Unit]
+Description=GPU Agent API Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=agent
+WorkingDirectory=/home/agent/gpu-agent
+ExecStart=/home/agent/gpu-agent/.venv/bin/python api_server.py
+Restart=always
+RestartSec=5
+Environment="PATH=/home/agent/gpu-agent/.venv/bin:/usr/local/bin:/usr/bin"
+
+[Install]
+WantedBy=multi-user.target
