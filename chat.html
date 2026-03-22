@@ -110,177 +110,173 @@ body {
 
 /* ===== Sidebar ===== */
 .sidebar-overlay {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.5);
-  z-index: 20;
-  opacity: 0; pointer-events: none;
-  transition: opacity 0.3s;
+  position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:40;
+  opacity:0;pointer-events:none;transition:opacity .3s;
 }
-.sidebar-overlay.open { opacity: 1; pointer-events: all; }
-
+.sidebar-overlay.open{opacity:1;pointer-events:all;}
 .sidebar {
-  position: fixed; top: 0; left: 0; bottom: 0;
-  width: 280px;
-  background: var(--bg-surface);
-  border-right: 1px solid var(--border);
-  z-index: 21;
-  transform: translateX(-100%);
-  transition: transform 0.3s ease;
-  display: flex; flex-direction: column;
-  overflow: hidden;
+  position:fixed;left:0;top:0;bottom:0;width:280px;
+  background:var(--bg-surface);z-index:50;
+  transform:translateX(-100%);transition:transform .3s cubic-bezier(.4,0,.2,1);
+  display:flex;flex-direction:column;overflow:hidden;
 }
-.sidebar.open { transform: translateX(0); }
+.sidebar.open{transform:translateX(0);}
 
-.sidebar-header {
-  padding: 16px;
-  border-bottom: 1px solid var(--border);
-  font-size: 14px; font-weight: 500;
-  color: var(--text-secondary);
-  display: flex; justify-content: space-between; align-items: center;
+/* Sidebar header */
+.sb-header {
+  display:flex;align-items:center;gap:10px;
+  padding:16px 16px 12px;
+  border-bottom:1px solid var(--border);flex-shrink:0;
 }
+.sb-brand {
+  display:flex;align-items:center;gap:8px;flex:1;
+  font-size:16px;font-weight:800;color:var(--accent);letter-spacing:-0.3px;
+}
+.sb-brand svg { width:18px;height:18px;flex-shrink:0; }
+.sb-close-btn {
+  width:28px;height:28px;background:none;border:none;
+  color:var(--text-muted);font-size:16px;cursor:pointer;
+  border-radius:6px;display:flex;align-items:center;justify-content:center;
+  transition:background .15s;
+}
+.sb-close-btn:active{background:var(--bg-card);}
 
-.sidebar-refresh {
-  background: none; border: none;
-  color: var(--text-muted); cursor: pointer;
-  font-size: 13px; padding: 4px 8px;
-  border-radius: 6px;
+/* New chat button */
+.sb-new-btn {
+  margin:10px 12px 4px;
+  padding:9px 14px;border-radius:10px;
+  background:var(--accent);color:var(--bg-deep);
+  border:none;font-size:13px;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  transition:opacity .15s;flex-shrink:0;
 }
-.sidebar-refresh:active { color: var(--accent); background: var(--accent-dim); }
+.sb-new-btn:active{opacity:0.8;}
 
-.sidebar-back-btn {
-  background: none; border: none;
-  color: var(--text-secondary); cursor: pointer;
-  font-size: 18px; padding: 4px 8px;
-  border-radius: 6px; line-height: 1;
-}
-.sidebar-back-btn:active { color: var(--accent); background: var(--accent-dim); }
-
-.session-item {
-  padding: 12px 14px;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.15s;
-  margin-bottom: 4px;
-  border: 1px solid transparent;
-}
-.session-item:active { background: var(--bg-card); }
-.session-item.active { background: var(--accent-dim); border-color: var(--accent); }
-.session-item.active .si-session-name { color: var(--accent); }
-.si-session-name { font-size: 14px; font-weight: 500; margin-bottom: 3px; }
-.si-session-time { font-size: 11px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
-.session-item-row { display: flex; align-items: center; justify-content: space-between; }
-.si-del-btn {
-  background: none; border: none;
-  color: var(--text-muted); font-size: 14px;
-  cursor: pointer; padding: 4px; opacity: 0.5;
-  transition: opacity 0.15s;
-}
-.si-del-btn:active { opacity: 1; color: var(--danger); }
-
-.sidebar-list {
-  flex: 1; overflow-y: auto; padding: 8px;
+/* Scrollable body */
+.sb-body {
+  flex:1;overflow-y:auto;padding:8px 0 16px;
+  -webkit-overflow-scrolling:touch;
 }
 
-.sidebar-item {
-  padding: 12px 14px;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.15s;
-  margin-bottom: 4px;
-}
-.sidebar-item:active { background: var(--bg-card); }
-.sidebar-item.active { background: var(--accent-dim); border: 1px solid var(--accent); }
-.sidebar-item.active .si-name { color: var(--accent); }
-
-.si-name {
-  font-size: 14px; font-weight: 500;
-  margin-bottom: 3px; color: var(--text-primary);
+/* Section */
+.sb-section { margin-top:8px; }
+.sb-section-title {
+  font-size:10px;font-weight:700;color:var(--text-muted);
+  letter-spacing:0.8px;text-transform:uppercase;
+  padding:0 16px 6px;
 }
 
-.si-status {
-  font-size: 11px; color: var(--text-muted);
-  font-family: 'JetBrains Mono', monospace;
+/* Recent session item */
+.sb-recent-item {
+  display:flex;align-items:center;gap:9px;
+  padding:9px 14px;margin:1px 6px;
+  border-radius:9px;cursor:pointer;
+  transition:background .15s;
 }
+.sb-recent-item:active{background:var(--bg-card);}
+.sb-recent-item.active{background:var(--accent-dim);}
+.sb-recent-icon {
+  width:22px;height:22px;border-radius:6px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;flex-shrink:0;
+}
+.sb-recent-info{flex:1;min-width:0;}
+.sb-recent-name {
+  font-size:13px;color:var(--text-primary);font-weight:500;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.sb-recent-time{font-size:11px;color:var(--text-muted);margin-top:1px;}
 
-.sidebar-global {
-  padding: 12px 14px;
-  border-radius: 10px;
-  cursor: pointer;
-  margin-bottom: 4px;
-  border: 1px dashed var(--border);
-  transition: all 0.15s;
+/* Feature card */
+.sb-feat-card {
+  margin:3px 8px;padding:12px 14px;border-radius:12px;
+  border:1px solid var(--border);background:var(--bg-card);
+  cursor:pointer;transition:all .2s;
+  display:flex;align-items:center;gap:12px;
 }
-.sidebar-global:active { background: var(--bg-card); }
-.sidebar-global.active { background: var(--accent-dim); border-color: var(--accent); }
+.sb-feat-card:active{opacity:0.8;transform:scale(0.98);}
+.sb-feat-card.unavailable{opacity:0.45;cursor:default;}
+.sb-feat-icon{font-size:22px;flex-shrink:0;}
+.sb-feat-info{flex:1;min-width:0;}
+.sb-feat-name{font-size:13px;font-weight:700;}
+.sb-feat-desc{font-size:11px;color:var(--text-muted);margin-top:2px;}
+.sb-feat-soon{
+  font-size:9px;font-weight:700;padding:2px 6px;border-radius:6px;
+  background:var(--bg-input);color:var(--text-muted);flex-shrink:0;
+}
+.sb-feat-arrow{color:var(--text-muted);font-size:16px;flex-shrink:0;}
 
-.sidebar-global .si-name { font-size: 13px; color: var(--text-secondary); }
-.sidebar-global.active .si-name { color: var(--accent); }
+/* Feature sessions sheet */
+.feat-sheet-overlay {
+  position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;
+  display:flex;align-items:flex-end;
+  opacity:0;pointer-events:none;transition:opacity .25s;
+}
+.feat-sheet-overlay.open{opacity:1;pointer-events:all;}
+.feat-sheet {
+  width:100%;background:var(--bg-surface);border-radius:20px 20px 0 0;
+  max-height:80vh;display:flex;flex-direction:column;
+  transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);
+  padding-bottom:max(16px,env(safe-area-inset-bottom));
+}
+.feat-sheet-overlay.open .feat-sheet{transform:translateY(0);}
+.feat-sheet-top{
+  padding:14px 18px 10px;border-bottom:1px solid var(--border);flex-shrink:0;
+  display:flex;align-items:center;gap:10px;
+}
+.feat-sheet-icon{font-size:20px;}
+.feat-sheet-title{font-size:15px;font-weight:700;color:var(--text-primary);flex:1;}
+.feat-sheet-close{
+  background:none;border:none;color:var(--text-muted);
+  font-size:18px;cursor:pointer;padding:4px;
+}
+.feat-new-session-btn {
+  margin:10px 14px 6px;padding:10px;border-radius:10px;
+  border:1.5px dashed var(--border);background:transparent;
+  color:var(--text-secondary);font-size:13px;font-weight:600;
+  cursor:pointer;transition:all .2s;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.feat-new-session-btn:active{border-color:var(--accent);color:var(--accent);}
+.feat-sess-list{overflow-y:auto;flex:1;padding:0 8px 8px;}
+.feat-sess-item{
+  display:flex;align-items:center;gap:10px;
+  padding:11px 10px;border-radius:10px;cursor:pointer;
+  transition:background .15s;
+}
+.feat-sess-item:active{background:var(--bg-card);}
+.feat-sess-item.active{background:var(--accent-dim);}
+.feat-sess-item-info{flex:1;min-width:0;}
+.feat-sess-name{font-size:13px;font-weight:500;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.feat-sess-time{font-size:11px;color:var(--text-muted);margin-top:2px;}
+.feat-sess-del{
+  background:none;border:none;color:var(--text-muted);
+  font-size:14px;padding:4px 6px;cursor:pointer;border-radius:6px;
+  transition:color .15s;flex-shrink:0;
+}
+.feat-sess-del:active{color:var(--danger);}
 
-.sidebar-footer {
-  padding: 10px;
-  border-top: 1px solid var(--border);
-  flex-shrink: 0;
-}
-
-.add-project-btn {
-  width: 100%;
-  padding: 10px;
-  background: none;
-  border: 1px dashed var(--border);
-  border-radius: 10px;
-  color: var(--text-muted);
-  font-size: 13px;
-  font-family: 'Noto Sans SC', sans-serif;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
-.add-project-btn:active {
-  background: var(--accent-dim);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-.add-project-btn.loading {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.si-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 4px;
-}
-
-.si-config-btn {
-  font-size: 10px;
-  padding: 2px 8px;
-  background: var(--warning);
-  color: var(--bg-deep);
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-family: 'Noto Sans SC', sans-serif;
-  font-weight: 500;
-  opacity: 0.85;
-  transition: opacity 0.15s;
-}
-.si-config-btn:active { opacity: 1; }
-
-.si-clear-btn {
-  background: none;
-  border: none;
-  font-size: 13px;
-  cursor: pointer;
-  opacity: 0.45;
-  padding: 0 2px;
-  transition: opacity 0.15s;
-  line-height: 1;
-}
-.si-clear-btn:active { opacity: 1; }
+/* Keep legacy classes for backward compat */
+.sidebar-header { display:none; }
+.sidebar-list { display:none; }
+.sidebar-footer { display:none; }
+.si-actions { display:flex;align-items:center;justify-content:space-between;margin-top:4px; }
+.si-name { font-size:14px;font-weight:500;margin-bottom:3px;color:var(--text-primary); }
+.si-status { font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono',monospace; }
+.sidebar-global { padding:12px 14px;border-radius:10px;cursor:pointer;margin-bottom:4px;border:1px dashed var(--border);transition:all 0.15s; }
+.sidebar-item { padding:12px 14px;border-radius:10px;cursor:pointer;transition:all 0.15s;margin-bottom:4px; }
+.session-item { padding:12px 14px;border-radius:10px;cursor:pointer;transition:all 0.15s;margin-bottom:4px;border:1px solid transparent; }
+.session-item.active { background:var(--accent-dim);border-color:var(--accent); }
+.session-item.active .si-session-name { color:var(--accent); }
+.si-session-name { font-size:14px;font-weight:500;margin-bottom:3px; }
+.si-session-time { font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono',monospace; }
+.session-item-row { display:flex;align-items:center;justify-content:space-between; }
+.si-del-btn { background:none;border:none;color:var(--text-muted);font-size:14px;cursor:pointer;padding:4px;opacity:0.5;transition:opacity 0.15s; }
+.si-del-btn:active { opacity:1;color:var(--danger); }
+.add-project-btn { width:100%;padding:10px;background:none;border:1px dashed var(--border);border-radius:10px;color:var(--text-muted);font-size:13px;font-family:'Noto Sans SC',sans-serif;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:6px; }
+.si-config-btn { font-size:10px;padding:2px 8px;background:var(--warning);color:var(--bg-deep);border:none;border-radius:8px;cursor:pointer;font-family:'Noto Sans SC',sans-serif;font-weight:500;opacity:0.85;transition:opacity 0.15s; }
+.si-clear-btn { background:none;border:none;font-size:13px;cursor:pointer;opacity:0.45;padding:0 2px;transition:opacity 0.15s;line-height:1; }
+.session-filter-wrap { display:none; }
 
 /* ===== Configure Modal ===== */
 .modal-overlay {
@@ -388,6 +384,83 @@ body {
 @keyframes slide-in-right {
   from { opacity: 0; transform: translateX(20px); }
 }
+
+/* ===== Welcome Screen ===== */
+.welcome {
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;overflow:hidden;
+}
+.wc-bg {
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  opacity:0.35;pointer-events:none;
+}
+.wc-flow-svg { width:100%;max-width:320px; }
+.flow-line { opacity:0.6; }
+.fl1 { animation: dashFlow 4s linear infinite; }
+.fl2 { animation: dashFlow 4.5s linear infinite reverse; }
+.fl3 { animation: dashFlow 5s linear infinite 1s; }
+.fl4 { animation: dashFlow 5.5s linear infinite 0.5s reverse; }
+@keyframes dashFlow { to { stroke-dashoffset: -28; } }
+.flow-node { animation: nodePulse 3s ease-in-out infinite; }
+.fn0 { animation-duration:2.5s; }
+.fn1 { animation-delay:0.5s; }
+.fn2 { animation-delay:1s; }
+.fn3 { animation-delay:1.5s; }
+.fn4 { animation-delay:2s; }
+@keyframes nodePulse { 0%,100%{r:5;opacity:0.6} 50%{r:8;opacity:1} }
+.flow-dot { opacity:0.9; }
+
+.wc-content {
+  position:relative;z-index:1;
+  display:flex;flex-direction:column;align-items:center;
+  padding:24px 24px 32px;text-align:center;
+}
+.wc-logo { margin-bottom:12px; animation: fadeUp 0.6s ease-out both; }
+.wc-title {
+  font-size:32px;font-weight:900;color:var(--accent);
+  letter-spacing:-1px;margin:0 0 6px;
+  animation: fadeUp 0.6s ease-out 0.1s both;
+}
+.wc-sub {
+  font-size:14px;color:var(--text-secondary);font-weight:600;
+  margin:0 0 8px;animation:fadeUp 0.6s ease-out 0.2s both;
+}
+.wc-desc {
+  font-size:12px;color:var(--text-muted);margin:0 0 24px;max-width:260px;line-height:1.6;
+  animation:fadeUp 0.6s ease-out 0.3s both;
+}
+@keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }
+
+.wc-features {
+  display:grid;grid-template-columns:1fr 1fr;gap:8px;
+  width:100%;max-width:300px;margin-bottom:24px;
+  animation:fadeUp 0.6s ease-out 0.4s both;
+}
+.wc-feat {
+  display:flex;flex-direction:column;align-items:flex-start;gap:4px;
+  padding:12px;border-radius:12px;
+  border:1px solid color-mix(in srgb, var(--fc) 30%, transparent);
+  background:color-mix(in srgb, var(--fc) 8%, transparent);
+  cursor:pointer;transition:all .2s;
+}
+.wc-feat:active{transform:scale(0.97);}
+.wc-feat.wc-feat-soon{opacity:0.5;cursor:default;}
+.wc-feat-icon{font-size:20px;}
+.wc-feat-name{font-size:12px;font-weight:700;color:var(--fc);}
+.wc-feat-tag{
+  font-size:9px;font-weight:700;padding:1px 6px;border-radius:6px;
+  background:color-mix(in srgb, var(--fc) 20%, transparent);
+  color:var(--fc);
+}
+
+.wc-cta {
+  padding:12px 32px;border-radius:24px;
+  background:var(--accent);color:var(--bg-deep);
+  border:none;font-size:14px;font-weight:800;cursor:pointer;
+  animation:fadeUp 0.6s ease-out 0.5s both;
+  transition:opacity .15s,transform .15s;
+}
+.wc-cta:active{opacity:0.8;transform:scale(0.97);}
 
 /* @starting-style 消息气泡入场 */
 .msg {
@@ -511,19 +584,6 @@ body {
 .typing span:nth-child(3){animation-delay:.4s}
 @keyframes bounce{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-5px);opacity:1}}
 
-/* ===== Welcome ===== */
-.welcome {
-  display:flex;flex-direction:column;align-items:center;
-  justify-content:center;padding:40px 20px;text-align:center;
-}
-.welcome-icon {
-  width:56px;height:56px;background:var(--accent-dim);
-  border:2px solid var(--accent);border-radius:16px;
-  display:flex;align-items:center;justify-content:center;
-  font-size:24px;margin-bottom:16px;
-}
-.welcome h2 { font-size:18px;font-weight:500;margin-bottom:6px; }
-.welcome p { font-size:13px;color:var(--text-secondary);line-height:1.6;max-width:260px; }
 
 /* ===== Quick Actions ===== */
 .quick-actions-wrap {
@@ -890,42 +950,60 @@ body {
 <!-- Sidebar Overlay -->
 <div class="sidebar-overlay" id="overlay" onclick="toggleSidebar()"></div>
 
+<!-- Feature Sessions Sheet -->
+<div class="feat-sheet-overlay" id="featSheetOverlay" onclick="closeFeatSheet(event)">
+  <div class="feat-sheet">
+    <div class="feat-sheet-top">
+      <span class="feat-sheet-icon" id="featSheetIcon"></span>
+      <span class="feat-sheet-title" id="featSheetTitle"></span>
+      <button class="feat-sheet-close" onclick="closeFeatSheet()">✕</button>
+    </div>
+    <button class="feat-new-session-btn" id="featNewSessionBtn">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      新建会话
+    </button>
+    <div class="feat-sess-list" id="featSessList"></div>
+  </div>
+</div>
+
 <!-- Sidebar -->
 <div class="sidebar" id="sidebar">
-  <!-- Projects header -->
-  <div class="sidebar-header" id="sbHeaderProjects">
-    <span>项目列表</span>
-    <div style="display:flex;gap:6px">
-      <button class="sidebar-refresh" onclick="document.getElementById('clearAllModal').classList.add('open')" title="清空所有历史">🗑</button>
-      <button class="sidebar-refresh" onclick="loadProjects()">刷新</button>
+  <div class="sb-header">
+    <div class="sb-brand">
+      <svg viewBox="0 0 22 18" fill="var(--accent)"><path d="M1,17 L1,12 L4.5,4 L8.5,12 L11,1 L13.5,12 L17.5,4 L21,12 L21,17 Z"/><circle cx="4.5" cy="4" r="2.2"/><circle cx="11" cy="1" r="2.2"/><circle cx="17.5" cy="4" r="2.2"/></svg>
+      AImpire
     </div>
-  </div>
-  <!-- Sessions header -->
-  <div class="sidebar-header" id="sbHeaderSessions" style="display:none">
-    <button class="sidebar-back-btn" onclick="showProjectsView()">‹ 返回</button>
-    <span id="sbSessionTitle" style="flex:1;text-align:center;font-size:13px"></span>
-    <button class="sidebar-refresh" onclick="createNewSession()">＋</button>
+    <button class="sb-close-btn" onclick="toggleSidebar()">✕</button>
   </div>
 
-  <!-- Projects list -->
-  <div class="sidebar-list" id="projectList">
-    <div class="sidebar-global active" onclick="handleGlobalClick()">
-      <div class="si-actions"><span class="si-name">全局（无项目）</span></div>
+  <button class="sb-new-btn" onclick="openFeatSheet('gpu')">
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    新对话
+  </button>
+
+  <div class="sb-body">
+    <!-- Recent conversations -->
+    <div class="sb-section">
+      <div class="sb-section-title">最近对话</div>
+      <div id="recentList"></div>
     </div>
-  </div>
 
-  <!-- Session filter -->
-  <div class="session-filter-wrap" id="sessionFilterWrap">
-    <input class="session-filter-input" id="sessionFilterInput" placeholder="过滤会话..." oninput="filterSessions(this.value)">
-  </div>
+    <!-- Feature zone -->
+    <div class="sb-section" style="margin-top:16px">
+      <div class="sb-section-title">功能区</div>
+      <div id="featureList"></div>
+    </div>
 
-  <!-- Sessions list -->
-  <div class="sidebar-list" id="sessionList" style="display:none"></div>
-
-  <div class="sidebar-footer">
-    <button class="add-project-btn" id="addProjectBtn" onclick="scanAndAddProject()">
-      <span>＋</span> 新建 / 导入项目
-    </button>
+    <!-- Hidden: keep IDs needed by other JS functions -->
+    <div style="display:none">
+      <div id="projectList"></div>
+      <div id="sessionList"></div>
+      <div id="sessionFilterWrap"><input id="sessionFilterInput"></div>
+      <div id="sbHeaderProjects"></div>
+      <div id="sbHeaderSessions"></div>
+      <span id="sbSessionTitle"></span>
+      <button id="addProjectBtn"></button>
+    </div>
   </div>
 </div>
 
@@ -1021,9 +1099,63 @@ body {
 <!-- Messages -->
 <div class="messages" id="messages">
   <div class="welcome" id="welcome">
-    <div class="welcome-icon">⚡</div>
-    <h2>GPU Agent</h2>
-    <p>用自然语言管理你的算力服务器。从左侧选择项目，或直接输入指令。</p>
+    <!-- Animated background -->
+    <div class="wc-bg">
+      <svg class="wc-flow-svg" viewBox="0 0 320 400" xmlns="http://www.w3.org/2000/svg">
+        <!-- Connection lines -->
+        <path class="flow-line fl1" d="M160 80 Q 80 160 60 240" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="8 6"/>
+        <path class="flow-line fl2" d="M160 80 Q 240 160 260 240" fill="none" stroke="#5c9dff" stroke-width="1.5" stroke-dasharray="8 6"/>
+        <path class="flow-line fl3" d="M60 240 Q 110 310 130 340" fill="none" stroke="#ff9d5c" stroke-width="1" stroke-dasharray="6 5"/>
+        <path class="flow-line fl4" d="M260 240 Q 210 310 190 340" fill="none" stroke="#c97dff" stroke-width="1" stroke-dasharray="6 5"/>
+        <!-- Nodes -->
+        <circle class="flow-node fn0" cx="160" cy="80" r="6" fill="var(--accent)"/>
+        <circle class="flow-node fn1" cx="60" cy="240" r="5" fill="var(--accent)" opacity="0.7"/>
+        <circle class="flow-node fn2" cx="260" cy="240" r="5" fill="#5c9dff" opacity="0.7"/>
+        <circle class="flow-node fn3" cx="130" cy="340" r="4" fill="#ff9d5c" opacity="0.6"/>
+        <circle class="flow-node fn4" cx="190" cy="340" r="4" fill="#c97dff" opacity="0.6"/>
+        <!-- Moving dots on lines -->
+        <circle class="flow-dot fd1" r="3" fill="var(--accent)"><animateMotion dur="3s" repeatCount="indefinite"><mpath href="#fl1path"/></animateMotion></circle>
+        <circle class="flow-dot fd2" r="3" fill="#5c9dff"><animateMotion dur="3.5s" repeatCount="indefinite" begin="0.5s"><mpath href="#fl2path"/></animateMotion></circle>
+        <!-- Hidden paths for animateMotion -->
+        <path id="fl1path" d="M160 80 Q 80 160 60 240" fill="none"/>
+        <path id="fl2path" d="M160 80 Q 240 160 260 240" fill="none"/>
+      </svg>
+    </div>
+
+    <!-- Content -->
+    <div class="wc-content">
+      <div class="wc-logo">
+        <svg viewBox="0 0 22 18" width="32" height="26" fill="var(--accent)"><path d="M1,17 L1,12 L4.5,4 L8.5,12 L11,1 L13.5,12 L17.5,4 L21,12 L21,17 Z"/><circle cx="4.5" cy="4" r="2.2"/><circle cx="11" cy="1" r="2.2"/><circle cx="17.5" cy="4" r="2.2"/></svg>
+      </div>
+      <h1 class="wc-title">AImpire</h1>
+      <p class="wc-sub">AI 驱动的智能控制平台</p>
+      <p class="wc-desc">通过自然语言对话，控制 GPU 服务器、本地电脑以及更多系统。</p>
+
+      <div class="wc-features">
+        <div class="wc-feat" onclick="openFeatSheet('gpu')" style="--fc:#00e5a0">
+          <span class="wc-feat-icon">🖥️</span>
+          <span class="wc-feat-name">GPU 服务器</span>
+          <span class="wc-feat-tag">可用</span>
+        </div>
+        <div class="wc-feat wc-feat-soon" style="--fc:#5c9dff">
+          <span class="wc-feat-icon">💻</span>
+          <span class="wc-feat-name">PC 控制</span>
+          <span class="wc-feat-tag">即将推出</span>
+        </div>
+        <div class="wc-feat wc-feat-soon" style="--fc:#ff9d5c">
+          <span class="wc-feat-icon">🌐</span>
+          <span class="wc-feat-name">Web 自动化</span>
+          <span class="wc-feat-tag">即将推出</span>
+        </div>
+        <div class="wc-feat wc-feat-soon" style="--fc:#c97dff">
+          <span class="wc-feat-icon">📊</span>
+          <span class="wc-feat-name">数据分析</span>
+          <span class="wc-feat-tag">即将推出</span>
+        </div>
+      </div>
+
+      <button class="wc-cta" onclick="openFeatSheet('gpu')">开始使用 →</button>
+    </div>
   </div>
 </div>
 
@@ -1220,6 +1352,8 @@ loadProjects();
 restoreLastSession();
 renderQuickActions();
 renderModeChip();
+renderSidebarRecent();
+renderSidebarFeatures();
 
 inputEl.addEventListener('input', () => {
   sendBtn.disabled = !inputEl.value.trim() || isLoading;
@@ -1231,6 +1365,139 @@ function toggleSidebar() {
   const overlay = document.getElementById('overlay');
   sidebar.classList.toggle('open');
   overlay.classList.toggle('open');
+  if (sidebar.classList.contains('open')) {
+    renderSidebarRecent();
+    renderSidebarFeatures();
+  }
+}
+
+// Collect all sessions across all projectId buckets
+function getAllSessions() {
+  const all = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('sessions_')) {
+      const projectId = key.slice('sessions_'.length);
+      const actualProjectId = (projectId === '__global__' || projectId === 'null') ? null : projectId;
+      try {
+        const sessions = JSON.parse(localStorage.getItem(key) || '[]');
+        sessions.forEach(s => all.push({ ...s, projectId: actualProjectId, modeId: 'gpu' }));
+      } catch {}
+    }
+  }
+  return all.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+}
+
+function renderSidebarRecent() {
+  const list = document.getElementById('recentList');
+  if (!list) return;
+  const sessions = getAllSessions().slice(0, 8);
+  if (!sessions.length) {
+    list.innerHTML = '<div style="padding:8px 16px;font-size:12px;color:var(--text-muted)">暂无对话记录</div>';
+    return;
+  }
+  list.innerHTML = '';
+  sessions.forEach(s => {
+    const mode = MODES.find(m => m.id === (s.modeId || 'gpu')) || MODES[0];
+    const isActive = currentSession && currentSession.id === s.id;
+    const item = document.createElement('div');
+    item.className = 'sb-recent-item' + (isActive ? ' active' : '');
+    const timeStr = s.createdAt ? new Date(s.createdAt).toLocaleDateString('zh-CN', {month:'numeric',day:'numeric'}) : '';
+    item.innerHTML = `
+      <div class="sb-recent-icon" style="background:${mode.color}22;color:${mode.color}">${mode.icon}</div>
+      <div class="sb-recent-info">
+        <div class="sb-recent-name">${escHtml(s.name || '新会话')}</div>
+        <div class="sb-recent-time">${timeStr}</div>
+      </div>`;
+    item.addEventListener('click', () => {
+      // Set project context then activate session
+      currentProject = s.projectId;
+      activateSession(s);
+    });
+    list.appendChild(item);
+  });
+}
+
+function renderSidebarFeatures() {
+  const list = document.getElementById('featureList');
+  if (!list) return;
+  list.innerHTML = '';
+  MODES.forEach(mode => {
+    const card = document.createElement('div');
+    card.className = 'sb-feat-card' + (mode.available ? '' : ' unavailable');
+    card.style.setProperty('--mode-color', mode.color);
+    const sessCount = mode.available ? getAllSessions().filter(s => (s.modeId || 'gpu') === mode.id).length : 0;
+    card.innerHTML = `
+      <span class="sb-feat-icon">${mode.icon}</span>
+      <div class="sb-feat-info">
+        <div class="sb-feat-name" style="color:${mode.available ? mode.color : 'var(--text-secondary)'}">${mode.name}</div>
+        <div class="sb-feat-desc">${mode.available ? (sessCount ? sessCount + ' 个会话' : '暂无会话') : mode.desc}</div>
+      </div>
+      ${mode.available ? '<span class="sb-feat-arrow">›</span>' : '<span class="sb-feat-soon">即将推出</span>'}`;
+    if (mode.available) card.addEventListener('click', () => { toggleSidebar(); openFeatSheet(mode.id); });
+    list.appendChild(card);
+  });
+}
+
+// Feature sessions sheet
+function openFeatSheet(modeId) {
+  const mode = MODES.find(m => m.id === modeId);
+  if (!mode || !mode.available) { showToast(mode ? mode.name + ' 即将推出' : ''); return; }
+
+  document.getElementById('featSheetIcon').textContent = mode.icon;
+  document.getElementById('featSheetTitle').textContent = mode.name;
+
+  // New session button
+  document.getElementById('featNewSessionBtn').onclick = () => {
+    closeFeatSheet();
+    currentProject = null;
+    currentMode = mode;
+    renderModeChip();
+    createNewSession(null);
+  };
+
+  // Session list
+  const list = document.getElementById('featSessList');
+  list.innerHTML = '';
+  const sessions = getAllSessions().filter(s => (s.modeId || 'gpu') === modeId);
+  if (!sessions.length) {
+    list.innerHTML = '<div style="padding:16px;text-align:center;font-size:13px;color:var(--text-muted)">还没有对话，点上方新建一个</div>';
+  } else {
+    sessions.forEach(s => {
+      const isActive = currentSession && currentSession.id === s.id;
+      const item = document.createElement('div');
+      item.className = 'feat-sess-item' + (isActive ? ' active' : '');
+      const timeStr = s.createdAt ? new Date(s.createdAt).toLocaleDateString('zh-CN', {month:'numeric',day:'numeric'}) : '';
+      item.innerHTML = `
+        <div class="feat-sess-item-info">
+          <div class="feat-sess-name">${escHtml(s.name || '新会话')}</div>
+          <div class="feat-sess-time">${timeStr}</div>
+        </div>
+        <button class="feat-sess-del" title="删除">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        </button>`;
+      item.querySelector('.feat-sess-del').addEventListener('click', e => {
+        e.stopPropagation();
+        deleteSession(s.projectId, s.id);
+        item.remove();
+      });
+      item.addEventListener('click', () => {
+        currentProject = s.projectId;
+        currentMode = mode;
+        renderModeChip();
+        activateSession(s);
+        closeFeatSheet();
+      });
+      list.appendChild(item);
+    });
+  }
+
+  document.getElementById('featSheetOverlay').classList.add('open');
+}
+
+function closeFeatSheet(e) {
+  if (e && e.target !== document.getElementById('featSheetOverlay')) return;
+  document.getElementById('featSheetOverlay').classList.remove('open');
 }
 
 async function loadProjects() {
@@ -1570,7 +1837,9 @@ function activateSession(session) {
     resetQuickActions();
   }
   restoreChatHistory();
-  toggleSidebar();
+  // Close sidebar if open
+  const _sb = document.getElementById('sidebar');
+  if (_sb && _sb.classList.contains('open')) toggleSidebar();
   // 更新 push 订阅的 session
   if (swReg) {
     swReg.pushManager.getSubscription().then(sub => {
