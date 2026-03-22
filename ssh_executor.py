@@ -74,6 +74,10 @@ class SSHExecutor:
                     connect_kwargs["key_filename"] = str(key_path)
 
                 client.connect(**connect_kwargs)
+                # 开启 TCP keepalive，防止长时间闲置后连接被防火墙静默断掉
+                transport = client.get_transport()
+                if transport:
+                    transport.set_keepalive(60)
                 self._client = client
                 logger.info("SSH 连接成功")
                 return client
@@ -109,29 +113,33 @@ class SSHExecutor:
 
     def run(self, command: str, timeout: int = 60) -> dict:
         """
-        执行命令并等待完成。
+        执行命令并等待完成。连接失效时自动重连一次。
 
         Returns:
             {"stdout": str, "stderr": str, "exit_code": int}
         """
-        client = self.connect()
-        logger.info(f"执行: {command[:100]}...")
-
-        stdin, stdout, stderr = client.exec_command(command, timeout=timeout)
-        exit_code = stdout.channel.recv_exit_status()
-
-        result = {
-            "stdout": stdout.read().decode("utf-8", errors="replace"),
-            "stderr": stderr.read().decode("utf-8", errors="replace"),
-            "exit_code": exit_code,
-        }
-
-        if exit_code != 0:
-            logger.warning(f"退出码 {exit_code}: {result['stderr'][:200]}")
-        else:
-            logger.info(f"成功, 输出 {len(result['stdout'])} 字符")
-
-        return result
+        for attempt in range(2):
+            try:
+                client = self.connect()
+                logger.info(f"执行: {command[:100]}...")
+                stdin, stdout, stderr = client.exec_command(command, timeout=timeout)
+                exit_code = stdout.channel.recv_exit_status()
+                result = {
+                    "stdout": stdout.read().decode("utf-8", errors="replace"),
+                    "stderr": stderr.read().decode("utf-8", errors="replace"),
+                    "exit_code": exit_code,
+                }
+                if exit_code != 0:
+                    logger.warning(f"退出码 {exit_code}: {result['stderr'][:200]}")
+                else:
+                    logger.info(f"成功, 输出 {len(result['stdout'])} 字符")
+                return result
+            except (paramiko.SSHException, EOFError, ConnectionResetError, OSError) as e:
+                if attempt == 0:
+                    logger.warning(f"SSH 命令失败，重连后重试: {e}")
+                    self._client = None  # 强制重连
+                else:
+                    raise
 
     # ===== tmux 持久化任务 =====
 

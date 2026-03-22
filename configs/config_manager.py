@@ -46,6 +46,7 @@ class ClaudeConfig(BaseModel):
     api_key: str
     model: str = "claude-sonnet-4-20250514"
     max_tokens: int = 8192
+    fast_model: Optional[str] = "claude-haiku-4-5-20251001"  # 用于简单查询，留空则禁用
 
 
 class ServerConfig(BaseModel):

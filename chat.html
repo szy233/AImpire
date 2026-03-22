@@ -574,6 +574,16 @@ body {
   font-family: 'JetBrains Mono', monospace;
   font-size: 12px; line-height: 1.5; color: var(--text-secondary);
 }
+/* highlight.js theme override — blend into our dark UI */
+.hljs { background: transparent !important; padding: 0 !important; color: inherit; }
+.hljs-keyword, .hljs-selector-tag { color: #ff79c6; }
+.hljs-string, .hljs-attr { color: #f1fa8c; }
+.hljs-comment { color: #6272a4; font-style: italic; }
+.hljs-number, .hljs-literal { color: #bd93f9; }
+.hljs-built_in, .hljs-name { color: #8be9fd; }
+.hljs-function .hljs-title, .hljs-title.function_ { color: #50fa7b; }
+.hljs-variable, .hljs-title { color: #f8f8f2; }
+.hljs-type { color: #ffb86c; }
 
 .typing { display:flex;align-items:center;gap:4px;padding:11px 15px;
   background:var(--bg-card);border:1px solid var(--border);
@@ -973,6 +983,10 @@ body {
   font-family: 'Noto Sans SC', sans-serif; outline: none;
 }
 </style>
+<!-- highlight.js 语法高亮（仅加载常用语言子集，~30KB） -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>if(typeof hljs!=='undefined'){hljs.configure({ignoreUnescapedHTML:true});}</script>
 </head>
 <body>
 
@@ -2044,6 +2058,7 @@ function restoreChatHistory() {
       } else if (m.role === 'agent') {
         bubble.innerHTML = m.html || fmtCached(m.id, m.text);
         if (m.html) _fmtCache.set(m.id, m.html);
+        highlightEl(bubble);
       } else {
         bubble.innerHTML = escHtml(m.text);
       }
@@ -2361,13 +2376,26 @@ async function send() {
     scrollToBottom();
   }
 
-  // RAF 批量更新：streaming 用 textContent（快），完成后 fade 到 fmt() HTML
+  // RAF 批量更新：流式时渐进渲染 markdown（完整块立即格式化，开放块保留原文）
   let rafId = null;
   function scheduleRender() {
     if (rafId) return;
     rafId = requestAnimationFrame(() => {
       rafId = null;
-      if (streamBubble) streamBubble.textContent = fullText;
+      if (!streamBubble) return;
+      const tickCount = (fullText.match(/```/g) || []).length;
+      if (tickCount % 2 === 0) {
+        // 所有代码块已关闭 — 完整渲染 markdown
+        streamBubble.innerHTML = fmt(fullText);
+        highlightEl(streamBubble);
+      } else {
+        // 有未关闭的代码块 — 安全前缀 HTML + 开放部分保留原文
+        const lastTick = fullText.lastIndexOf('```');
+        const safe = fmt(fullText.slice(0, lastTick));
+        const raw = escHtml(fullText.slice(lastTick));
+        streamBubble.innerHTML = safe + '<span style="font-family:monospace;opacity:.75">' + raw + '</span>';
+        highlightEl(streamBubble);
+      }
       scrollToBottom();
     });
   }
@@ -2453,10 +2481,11 @@ async function send() {
         const rendered = fmt(fullText);
         _fmtCache.set(streamMsg.id, rendered);
         if (streamBubble) {
-          // textContent → innerHTML 平滑过渡
+          // 最终渲染：淡入 + 语法高亮
           streamBubble.style.opacity = '0';
           requestAnimationFrame(() => {
             streamBubble.innerHTML = rendered;
+            highlightEl(streamBubble);
             requestAnimationFrame(() => { streamBubble.style.opacity = ''; });
           });
         }
@@ -2533,6 +2562,7 @@ function appendMessageEl(msg, lazy = false) {
   } else if (msg.role === 'agent') {
     bubble.innerHTML = msg.html || fmtCached(msg.id, msg.text);
     if (msg.html) _fmtCache.set(msg.id, msg.html);
+    highlightEl(bubble);
   } else {
     bubble.innerHTML = escHtml(msg.text);
   }
@@ -2684,12 +2714,21 @@ function exportChat() {
 }
 
 function escHtml(t) { const d=document.createElement('div'); d.textContent=t; return d.innerHTML; }
+
+function highlightEl(el) {
+  if (typeof hljs === 'undefined') return;
+  el.querySelectorAll('pre code[class]').forEach(b => {
+    if (!b.dataset.highlighted) hljs.highlightElement(b);
+  });
+}
+
 function fmt(text) {
   return text
     .replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
       const escaped = escHtml(code.replace(/\n$/, ''));
       const label = lang || 'code';
-      return `<div class="code-block"><div class="code-header"><span class="code-lang">${label}</span><button class="copy-btn" onclick="copyCode(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>复制</button></div><pre><code>${escaped}</code></pre></div>`;
+      const langClass = lang ? ` class="language-${lang}"` : '';
+      return `<div class="code-block"><div class="code-header"><span class="code-lang">${label}</span><button class="copy-btn" onclick="copyCode(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>复制</button></div><pre><code${langClass}>${escaped}</code></pre></div>`;
     })
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
