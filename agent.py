@@ -303,6 +303,22 @@ def _supports_thinking(model: str) -> bool:
     """claude-3-7 / claude-sonnet-4 / claude-opus-4 支持扩展思考。"""
     return any(x in model for x in ("claude-3-7", "claude-sonnet-4", "claude-opus-4"))
 
+
+def _log_usage(usage, model: str, round_num: int):
+    """打印 token 使用量，方便排查缓存命中率和花费。"""
+    if not usage:
+        return
+    inp   = getattr(usage, 'input_tokens', 0) or 0
+    out   = getattr(usage, 'output_tokens', 0) or 0
+    cache_hit  = getattr(usage, 'cache_read_input_tokens', 0) or 0
+    cache_new  = getattr(usage, 'cache_creation_input_tokens', 0) or 0
+    hit_rate   = f"{cache_hit / inp * 100:.0f}%" if inp > 0 else "n/a"
+    logger.info(
+        f"[token] 轮次={round_num} model={model.split('-')[1]} "
+        f"in={inp}(缓存命中={cache_hit}/{hit_rate} 新建={cache_new}) "
+        f"out={out}"
+    )
+
 MAX_HISTORY_MSGS = 40        # 最多保留最近 40 条消息（约 20 轮对话）
 TOOL_RESULT_MAX_LEN = 2000  # tool_result 内容截断阈值
 THINKING_BUDGET = 2000       # 扩展思考 token 预算（0 表示不启用）
@@ -566,6 +582,7 @@ class Agent:
                     tool_uses.append(block)
 
             final_text.extend(text_parts)
+            _log_usage(getattr(response, 'usage', None), selected_model, round_num + 1)
 
             # 将 SDK 对象序列化后追加（保证 messages 全为可 JSON 化的 dict）
             serialized_content = [
@@ -696,6 +713,7 @@ class Agent:
                 all_text_parts.extend(round_text)
                 final_msg = await stream.get_final_message()
 
+            _log_usage(getattr(final_msg, 'usage', None), selected_model, round_num + 1)
             tool_uses = [b for b in final_msg.content if b.type == "tool_use"]
 
             if not tool_uses:
