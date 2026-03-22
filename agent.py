@@ -498,11 +498,13 @@ class Agent:
 
         final_response = "\n".join(final_text)
 
-        # 保存完整 messages（包含 tool_use / tool_result 中间过程）供下轮续用
+        # 只存文本对（与 Claude 客户端一致）
         if session_id is not None:
-            serialized = _serialize_messages(messages)
-            self.session_histories[session_id] = serialized
-            self._save_history(session_id, serialized)
+            hist = list(self.session_histories.get(session_id, []))
+            hist.append({"role": "user", "content": user_message})
+            hist.append({"role": "assistant", "content": final_response})
+            self.session_histories[session_id] = hist
+            self._save_history(session_id, hist)
 
         return final_response
 
@@ -595,10 +597,13 @@ class Agent:
 
         final_response = "".join(all_text_parts)
 
+        # 只存文本对，不存 tool_use/tool_result（与 Claude 客户端一致，历史轻量）
         if session_id is not None:
-            serialized = _serialize_messages(messages)
-            self.session_histories[session_id] = serialized
-            self._save_history(session_id, serialized)
+            hist = list(self.session_histories.get(session_id, []))
+            hist.append({"role": "user", "content": user_message})
+            hist.append({"role": "assistant", "content": final_response})
+            self.session_histories[session_id] = hist
+            self._save_history(session_id, hist)
 
         yield {"type": "done", "full_text": final_response}
 
