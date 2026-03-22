@@ -11,6 +11,7 @@ agent_core — Agent 调度核心
 - state_manager: 实验状态
 """
 
+import asyncio
 import json
 from pathlib import Path
 from typing import Optional, Dict, Any, List
@@ -262,33 +263,22 @@ TOOL_DEFINITIONS = [
 
 # ===== 系统提示词 =====
 
-SYSTEM_PROMPT = """你是一个 AI 研究助理，负责管理远程 GPU 服务器上的机器学习实验。
+SYSTEM_PROMPT = """你是 AI 研究助理，管理远程 GPU 服务器上的机器学习实验。
 
-你的职责：
-1. 理解用户的自然语言指令，将其转化为具体操作
-2. 管理代码（生成、修改、提交到 Git，同步到算力服务器）
-3. 在算力服务器上启动和监控训练任务
-4. 分析训练结果并给出建议
-5. 管理多个研究项目
+职责：理解自然语言指令 → 管理代码 → 启动/监控训练 → 分析结果 → 管理多项目
 
-多项目管理：
-- 用户可能在不同项目上下文中操作，注意 [当前项目] 标记
-- 首次接管项目时：scan_projects → analyze_project → 生成 .agent.yaml → save_project_config
-- 有项目配置后，使用配置中的 train_command、log_path、conda_env 等信息
-- 启动训练时用项目自己的 tmux_session 名，避免冲突
-- 解析日志时用项目配置中的 custom_patterns 和 key_metrics
+多项目：
+- 注意消息中的 [当前项目] 标记
+- 首次接管：scan_projects → analyze_project → save_project_config
+- 有配置后用 train_command / log_path / conda_env / tmux_session
 
-工作流程：
-- 修改代码后：write_code → git_commit → sync_code → ssh_run（启动训练）
-- 长时间训练必须用 tmux（设置 use_tmux: true）
-- 查看进度：check_task_status 或 tail_remote_log
-- 训练完成后：analyze_remote_log 解析结果，update_experiment 记录状态
+标准流程：
+- 改代码：write_code → git_commit → sync_code → ssh_run
+- 长任务必须用 tmux（use_tmux: true）
+- 看进度：check_task_status / tail_remote_log
+- 完成后：analyze_remote_log → update_experiment
 
-注意事项：
-- 执行危险操作前先跟用户确认
-- 保持 Git 提交信息清晰有意义
-- 分析结果时给出具体数字和改进建议
-- 回复用中文，简洁明了
+规则：危险操作先确认；Git 信息要清晰；结果给具体数字和建议；中文回复，简洁。
 """
 
 # ===== Prompt Caching =====
@@ -309,6 +299,17 @@ _BLOCK_ALLOWED_KEYS = {
 
 MAX_HISTORY_MSGS = 40        # 最多保留最近 40 条消息（约 20 轮对话）
 TOOL_RESULT_MAX_LEN = 2000  # tool_result 内容截断阈值
+
+# 触发注入状态上下文的关键词（其余消息跳过 summary_text() 节省 token）
+_STATE_KEYWORDS = {"状态", "gpu", "任务", "实验", "进程", "查看", "检查", "日志", "训练", "跑", "运行"}
+
+
+def _should_inject_state(msg: str, is_new_session: bool) -> bool:
+    """新会话或消息含状态关键词时才注入 state.summary_text()。"""
+    if is_new_session:
+        return True
+    lm = msg.lower()
+    return any(k in lm for k in _STATE_KEYWORDS)
 
 
 def _trim_history(msgs: List[Dict]) -> List[Dict]:
@@ -450,14 +451,21 @@ class Agent:
                 self.session_histories[session_id] = loaded
         history = self.session_histories.get(session_id, []) if session_id else []
         messages = list(_trim_history(history))
-        messages.append({
-            "role": "user",
-            "content": f"[当前状态]\n{context}{project_context}\n[用户指令]\n{user_message}",
-        })
+
+        # 仅在新会话或含状态关键词时注入 summary（节省 token）
+        is_new = not bool(history)
+        if _should_inject_state(user_message, is_new):
+            user_content = f"[当前状态]\n{context}{project_context}\n[用户指令]\n{user_message}"
+        elif project_context:
+            user_content = f"{project_context}\n[用户指令]\n{user_message}"
+        else:
+            user_content = user_message
+        messages.append({"role": "user", "content": user_content})
 
         cfg = get_config().claude
         max_rounds = 20
         final_text = []
+        loop = asyncio.get_event_loop()
 
         for round_num in range(max_rounds):
             logger.info(f"Agent 轮次 {round_num + 1}")
@@ -491,16 +499,18 @@ class Agent:
             if not tool_uses:
                 break
 
-            tool_results = []
-            for tool_block in tool_uses:
-                logger.info(f"调用工具: {tool_block.name}({json.dumps(tool_block.input, ensure_ascii=False)[:100]})")
-                result = self._execute_tool(tool_block.name, tool_block.input)
-                tool_results.append({
-                    "type": "tool_result",
-                    "tool_use_id": tool_block.id,
-                    "content": str(result),
-                })
+            # 并行执行所有工具（在线程池中运行阻塞 IO）
+            for t in tool_uses:
+                logger.info(f"调用工具: {t.name}({json.dumps(t.input, ensure_ascii=False)[:100]})")
+            raw_results = await asyncio.gather(*[
+                loop.run_in_executor(None, self._execute_tool, t.name, t.input)
+                for t in tool_uses
+            ])
 
+            tool_results = [
+                {"type": "tool_result", "tool_use_id": t.id, "content": str(r)}
+                for t, r in zip(tool_uses, raw_results)
+            ]
             messages.append({"role": "user", "content": tool_results})
 
         final_response = "\n".join(final_text)
@@ -550,14 +560,21 @@ class Agent:
                 self.session_histories[session_id] = loaded
         history = self.session_histories.get(session_id, []) if session_id else []
         messages = list(_trim_history(history))
-        messages.append({
-            "role": "user",
-            "content": f"[当前状态]\n{context}{project_context}\n[用户指令]\n{user_message}",
-        })
+
+        # 仅在新会话或含状态关键词时注入 summary（节省 token）
+        is_new = not bool(history)
+        if _should_inject_state(user_message, is_new):
+            user_content = f"[当前状态]\n{context}{project_context}\n[用户指令]\n{user_message}"
+        elif project_context:
+            user_content = f"{project_context}\n[用户指令]\n{user_message}"
+        else:
+            user_content = user_message
+        messages.append({"role": "user", "content": user_content})
 
         cfg = get_config().claude
         max_rounds = 20
         all_text_parts = []
+        loop = asyncio.get_event_loop()
 
         for round_num in range(max_rounds):
             logger.info(f"Agent 流式轮次 {round_num + 1}")
@@ -582,16 +599,24 @@ class Agent:
             if not tool_uses:
                 break
 
+            # 先广播所有 tool_call 事件
+            for t in tool_uses:
+                logger.info(f"调用工具: {t.name}")
+                yield {"type": "tool_call", "name": t.name, "input": json.dumps(t.input, ensure_ascii=False)[:120]}
+
+            # 并行执行（在线程池中，不阻塞事件循环）
+            raw_results = await asyncio.gather(*[
+                loop.run_in_executor(None, self._execute_tool, t.name, t.input)
+                for t in tool_uses
+            ])
+
             tool_results = []
-            for tool_block in tool_uses:
-                logger.info(f"调用工具: {tool_block.name}")
-                yield {"type": "tool_call", "name": tool_block.name, "input": json.dumps(tool_block.input, ensure_ascii=False)[:120]}
-                result = self._execute_tool(tool_block.name, tool_block.input)
+            for t, result in zip(tool_uses, raw_results):
                 result_str = str(result)
-                yield {"type": "tool_result", "name": tool_block.name, "content": result_str[:300]}
+                yield {"type": "tool_result", "name": t.name, "content": result_str[:300]}
                 tool_results.append({
                     "type": "tool_result",
-                    "tool_use_id": tool_block.id,
+                    "tool_use_id": t.id,
                     "content": result_str,
                 })
 
