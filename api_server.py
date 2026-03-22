@@ -156,13 +156,44 @@ async def chat_stream(req: ChatRequest):
     agent = get_agent()
 
     async def generate():
+        import asyncio
         try:
-            async for event in agent.process_message_stream(
-                req.message,
-                project_id=req.project_id,
-                session_id=req.session_id,
-            ):
-                yield f"data: {json_module.dumps(event, ensure_ascii=False)}\n\n"
+            last_event_time = asyncio.get_event_loop().time()
+
+            async def keepalive_wrapper():
+                nonlocal last_event_time
+                async for event in agent.process_message_stream(
+                    req.message,
+                    project_id=req.project_id,
+                    session_id=req.session_id,
+                ):
+                    last_event_time = asyncio.get_event_loop().time()
+                    yield event
+
+            # 并发：事件流 + 心跳（每 8 秒发一次 ping，防止 iOS Safari 断连）
+            event_queue = asyncio.Queue()
+            done_flag = {"done": False}
+
+            async def produce():
+                async for event in keepalive_wrapper():
+                    await event_queue.put(event)
+                done_flag["done"] = True
+                await event_queue.put(None)  # sentinel
+
+            producer = asyncio.create_task(produce())
+
+            while True:
+                try:
+                    event = await asyncio.wait_for(event_queue.get(), timeout=8.0)
+                    if event is None:
+                        break
+                    yield f"data: {json_module.dumps(event, ensure_ascii=False)}\n\n"
+                except asyncio.TimeoutError:
+                    # 心跳：SSE 注释行，保持连接但不触发客户端 onmessage
+                    yield ": ping\n\n"
+
+            await producer
+
         except Exception as e:
             logger.error(f"Stream error: {e}")
             yield f"data: {json_module.dumps({'type': 'error', 'content': str(e)})}\n\n"

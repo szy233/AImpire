@@ -45,7 +45,7 @@ class LocalConfig(BaseModel):
 class ClaudeConfig(BaseModel):
     api_key: str
     model: str = "claude-sonnet-4-20250514"
-    max_tokens: int = 4096
+    max_tokens: int = 8192
 
 
 class ServerConfig(BaseModel):
