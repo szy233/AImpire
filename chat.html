@@ -584,6 +584,35 @@ body {
 .typing span:nth-child(3){animation-delay:.4s}
 @keyframes bounce{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-5px);opacity:1}}
 
+/* ===== Thinking Block ===== */
+.thinking-block {
+  margin: 0 0 6px 0;
+  border-left: 2px solid var(--accent);
+  padding: 6px 10px;
+  border-radius: 0 8px 8px 0;
+  background: rgba(0,229,160,0.06);
+  font-size: 11.5px;
+  color: var(--text-muted);
+  overflow: hidden;
+}
+.thinking-header {
+  display: flex; align-items: center; gap: 5px;
+  cursor: pointer; user-select: none;
+}
+.thinking-icon { color: var(--accent); font-size: 12px; flex-shrink:0; }
+.thinking-label { font-weight: 500; letter-spacing: .3px; }
+.thinking-anim { opacity: .6; }
+@keyframes thinking-pulse { 0%,100%{opacity:.8} 50%{opacity:.2} }
+.thinking-anim { animation: thinking-pulse 1.2s ease-in-out infinite; }
+.thinking-done .thinking-anim { animation: none; opacity: .5; font-size: 10px; }
+.thinking-body {
+  margin-top: 5px; white-space: pre-wrap; line-height: 1.55;
+  max-height: 180px; overflow-y: auto;
+  font-family: var(--font-mono, monospace); font-size: 10.5px;
+}
+.thinking-body.collapsed { display: none; }
+.thinking-block.expanded .thinking-body.collapsed { display: block; }
+
 
 /* ===== Quick Actions ===== */
 .quick-actions-wrap {
@@ -2260,6 +2289,53 @@ async function send() {
   let streamBubble = null;
   let fullText = '';
 
+  // 思考块状态
+  let thinkingEl = null;
+  let thinkingAccum = '';
+  let thinkingDone = false;
+
+  function initThinkingBlock() {
+    if (thinkingEl) return;
+    initStreamBubble();
+    thinkingEl = document.createElement('div');
+    thinkingEl.className = 'thinking-block';
+    thinkingEl.innerHTML =
+      '<div class="thinking-header">' +
+        '<span class="thinking-icon">◈</span>' +
+        '<span class="thinking-label">思考中</span>' +
+        '<span class="thinking-anim">···</span>' +
+      '</div>' +
+      '<div class="thinking-body"></div>';
+    streamBubble.insertBefore(thinkingEl, streamBubble.firstChild);
+    scrollToBottom();
+  }
+
+  function appendThinkingDelta(text) {
+    if (!thinkingEl) initThinkingBlock();
+    thinkingAccum += text;
+    const bodyEl = thinkingEl.querySelector('.thinking-body');
+    if (bodyEl) {
+      // 只显示最近 400 字，避免撑开气泡
+      bodyEl.textContent = thinkingAccum.length > 400
+        ? '…' + thinkingAccum.slice(-400)
+        : thinkingAccum;
+    }
+    scrollToBottom();
+  }
+
+  function collapseThinking() {
+    if (!thinkingEl || thinkingDone) return;
+    thinkingDone = true;
+    const chars = thinkingAccum.length;
+    thinkingEl.innerHTML =
+      '<div class="thinking-header thinking-done" onclick="this.closest(\'.thinking-block\').classList.toggle(\'expanded\')">' +
+        '<span class="thinking-icon">◈</span>' +
+        '<span class="thinking-label">已思考</span>' +
+        '<span class="thinking-anim">▶ ' + chars + '字</span>' +
+      '</div>' +
+      '<div class="thinking-body collapsed">' + escHtml(thinkingAccum) + '</div>';
+  }
+
   function initStreamBubble() {
     if (streamMsg) return;
     removeTyping(typingEl);
@@ -2346,13 +2422,17 @@ async function send() {
           if (raw === '[DONE]') break;
           try {
             const event = JSON.parse(raw);
-            if (event.type === 'text') {
+            if (event.type === 'thinking_delta') {
+              appendThinkingDelta(event.delta);
+            } else if (event.type === 'text') {
               initStreamBubble();
+              collapseThinking(); // 文本开始时折叠思考块
               hideToolStatus();
               fullText += event.delta;
               scheduleRender(); // 批量到下一帧，不阻塞主线程
             } else if (event.type === 'tool_call') {
               initStreamBubble();
+              collapseThinking();
               showToolStatus(event.name);
             } else if (event.type === 'error') {
               removeTyping(typingEl);
@@ -2365,6 +2445,7 @@ async function send() {
       }
 
       hideToolStatus();
+      collapseThinking();
 
       if (streamMsg) {
         // 更新 currentMessages，并写入 fmt 缓存

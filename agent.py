@@ -295,10 +295,18 @@ _BLOCK_ALLOWED_KEYS = {
     "tool_use":    {"type", "id", "name", "input"},
     "tool_result": {"type", "tool_use_id", "content"},
     "image":       {"type", "source"},
+    "thinking":    {"type", "thinking", "signature"},  # 扩展思考块（interleaved thinking 要求保留）
 }
+
+
+def _supports_thinking(model: str) -> bool:
+    """claude-3-7 / claude-sonnet-4 / claude-opus-4 支持扩展思考。"""
+    return any(x in model for x in ("claude-3-7", "claude-sonnet-4", "claude-opus-4"))
 
 MAX_HISTORY_MSGS = 40        # 最多保留最近 40 条消息（约 20 轮对话）
 TOOL_RESULT_MAX_LEN = 2000  # tool_result 内容截断阈值
+THINKING_BUDGET = 2000       # 扩展思考 token 预算（0 表示不启用）
+SUMMARIZE_THRESHOLD = 28     # 历史超过此条数时用 haiku 压缩
 
 # 触发注入状态上下文的关键词（其余消息跳过 summary_text() 节省 token）
 _STATE_KEYWORDS = {"状态", "gpu", "任务", "实验", "进程", "查看", "检查", "日志", "训练", "跑", "运行"}
@@ -407,6 +415,40 @@ class Agent:
         if path.exists():
             path.unlink(missing_ok=True)
 
+    async def _maybe_summarize(self, messages: List[Dict], session_id: str) -> List[Dict]:
+        """历史超过阈值时，用 haiku 压缩旧消息，保留近 18 条。"""
+        if len(messages) <= SUMMARIZE_THRESHOLD:
+            return messages
+        keep = 18
+        old, recent = messages[:-keep], messages[-keep:]
+        lines = []
+        for m in old:
+            c = m["content"]
+            if isinstance(c, str) and c.strip():
+                lines.append(f"[{m['role']}] {c[:300]}")
+        if not lines:
+            return recent
+        try:
+            resp = await self.client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=400,
+                messages=[{"role": "user", "content": (
+                    "简洁总结以下对话历史（约100字，保留关键决策和实验结果）：\n\n" + "\n".join(lines)
+                )}]
+            )
+            summary = resp.content[0].text
+            compressed = [
+                {"role": "user", "content": f"[之前对话摘要]\n{summary}"},
+                {"role": "assistant", "content": "了解，继续协助你的工作。"},
+                *recent,
+            ]
+            self._save_history(session_id, compressed)
+            logger.info(f"历史已压缩: {len(messages)} → {len(compressed)} 条")
+            return compressed
+        except Exception as e:
+            logger.warning(f"历史压缩失败，退回截断: {e}")
+            return recent
+
     async def process_message(
         self,
         user_message: str,
@@ -444,10 +486,11 @@ class Agent:
             else:
                 project_context = f"\n[当前项目] {project_id}（未配置 .agent.yaml，可用 analyze_project 分析后生成）\n"
 
-        # 懒加载磁盘历史
+        # 懒加载磁盘历史（首次加载时按需压缩）
         if session_id and session_id not in self.session_histories:
             loaded = self._load_history(session_id)
             if loaded:
+                loaded = await self._maybe_summarize(loaded, session_id)
                 self.session_histories[session_id] = loaded
         history = self.session_histories.get(session_id, []) if session_id else []
         messages = list(_trim_history(history))
@@ -463,6 +506,13 @@ class Agent:
         messages.append({"role": "user", "content": user_content})
 
         cfg = get_config().claude
+        use_thinking = THINKING_BUDGET > 0 and _supports_thinking(cfg.model)
+        api_extra = {}
+        if use_thinking:
+            api_extra["thinking"] = {"type": "enabled", "budget_tokens": THINKING_BUDGET}
+            api_extra["betas"] = ["interleaved-thinking-2025-05-14"]
+        effective_max_tokens = max(cfg.max_tokens, THINKING_BUDGET + 6000) if use_thinking else cfg.max_tokens
+
         max_rounds = 20
         final_text = []
         loop = asyncio.get_event_loop()
@@ -472,10 +522,11 @@ class Agent:
 
             response = await self.client.messages.create(
                 model=cfg.model,
-                max_tokens=cfg.max_tokens,
+                max_tokens=effective_max_tokens,
                 system=_SYSTEM_WITH_CACHE,
                 tools=_TOOLS_WITH_CACHE,
                 messages=messages,
+                **api_extra,
             )
 
             text_parts = []
@@ -557,6 +608,7 @@ class Agent:
         if session_id and session_id not in self.session_histories:
             loaded = self._load_history(session_id)
             if loaded:
+                loaded = await self._maybe_summarize(loaded, session_id)
                 self.session_histories[session_id] = loaded
         history = self.session_histories.get(session_id, []) if session_id else []
         messages = list(_trim_history(history))
@@ -572,6 +624,13 @@ class Agent:
         messages.append({"role": "user", "content": user_content})
 
         cfg = get_config().claude
+        use_thinking = THINKING_BUDGET > 0 and _supports_thinking(cfg.model)
+        api_extra = {}
+        if use_thinking:
+            api_extra["thinking"] = {"type": "enabled", "budget_tokens": THINKING_BUDGET}
+            api_extra["betas"] = ["interleaved-thinking-2025-05-14"]
+        effective_max_tokens = max(cfg.max_tokens, THINKING_BUDGET + 6000) if use_thinking else cfg.max_tokens
+
         max_rounds = 20
         all_text_parts = []
         loop = asyncio.get_event_loop()
@@ -581,15 +640,30 @@ class Agent:
 
             async with self.client.messages.stream(
                 model=cfg.model,
-                max_tokens=cfg.max_tokens,
+                max_tokens=effective_max_tokens,
                 system=_SYSTEM_WITH_CACHE,
                 tools=_TOOLS_WITH_CACHE,
                 messages=messages,
+                **api_extra,
             ) as stream:
                 round_text = []
-                async for text in stream.text_stream:
-                    round_text.append(text)
-                    yield {"type": "text", "delta": text}
+                # 使用原始事件流以捕获 thinking_delta（text_stream 不含思考内容）
+                async for event in stream:
+                    etype = getattr(event, 'type', None)
+                    if etype == 'content_block_delta':
+                        delta = getattr(event, 'delta', None)
+                        if delta is None:
+                            continue
+                        dtype = getattr(delta, 'type', '')
+                        if dtype == 'thinking_delta':
+                            thinking_txt = getattr(delta, 'thinking', '')
+                            if thinking_txt:
+                                yield {"type": "thinking_delta", "delta": thinking_txt}
+                        elif dtype == 'text_delta':
+                            txt = getattr(delta, 'text', '')
+                            if txt:
+                                round_text.append(txt)
+                                yield {"type": "text", "delta": txt}
 
                 all_text_parts.extend(round_text)
                 final_msg = await stream.get_final_message()
