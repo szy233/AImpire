@@ -2165,6 +2165,19 @@ async function checkHealth() {
   }
 }
 
+// ===== Wake Lock (防止生成期间熄屏) =====
+let _wakeLock = null;
+async function acquireWakeLock() {
+  if (!('wakeLock' in navigator)) return;
+  try { _wakeLock = await navigator.wakeLock.request('screen'); } catch {}
+}
+function releaseWakeLock() {
+  if (_wakeLock) { _wakeLock.release(); _wakeLock = null; }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && isLoading) acquireWakeLock();
+});
+
 // ===== Send =====
 function setLoadingState(loading) {
   isLoading = loading;
@@ -2174,11 +2187,13 @@ function setLoadingState(loading) {
     sendBtn.disabled = false;
     if (icon) icon.innerHTML = '<rect x="5" y="5" width="14" height="14" rx="2"/>';
     renderQuickActions();
+    acquireWakeLock();
   } else {
     sendBtn.classList.remove('stop-mode');
     sendBtn.disabled = !inputEl.value.trim();
     if (icon) icon.innerHTML = '<path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>';
     renderQuickActions();
+    releaseWakeLock();
   }
 }
 
