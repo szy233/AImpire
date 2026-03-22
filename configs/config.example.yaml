@@ -1,0 +1,38 @@
+# GPU Agent 配置文件
+# 复制此文件为 config.yaml 并填写你的实际信息
+
+# ===== 算力服务器 =====
+gpu_server:
+  host: "localhost"                    # 隧道模式下填 localhost
+  port: 22
+  username: "szy"                      # 算力服务器用户名
+  key_path: "~/.ssh/id_ed25519"        # SSH 私钥路径
+  password: null
+  tunnel_port: 2222                    # 反向隧道端口（算力服务器 autossh 过来的）
+  workspace: "/home/szy/research"      # 算力服务器上的工作目录
+  conda_env: "anaconda3"               # conda 环境名（可选，设 null 则不激活）
+
+# ===== 本地/云服务器 =====
+local:
+  workspace: "./workspace"             # 本地 Git 仓库根目录
+  results_dir: "./results"             # 拉回的结果存放目录
+  db_path: "./data/state.db"           # SQLite 数据库路径
+
+# ===== Claude API =====
+claude:
+  api_key: "sk-ant-xxxxx"             # 你的 Anthropic API Key
+  model: "claude-sonnet-4-20250514"
+  max_tokens: 4096
+
+# ===== Web 服务 =====
+server:
+  host: "0.0.0.0"
+  port: 8000
+  auth_token: "your-secret-token-here" # 手机端请求时携带的令牌
+  vapid_public_key: ""   # Run: python setup_vapid.py to generate
+  vapid_private_key: ""  # Run: python setup_vapid.py to generate
+
+# ===== 通知（可选）=====
+notify:
+  telegram_bot_token: null
+  telegram_chat_id: null

@@ -1,0 +1,30 @@
+# 配置文件（含 API Key、服务器信息）
+configs/config.yaml
+
+# 个人笔记
+AImpire_handoff.md
+PROGRESS.md
+
+# 运行时数据
+data/
+*.db
+*.db-journal
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.env
+
+# 生成的图标（运行 generate_icons.py 即可重新生成）
+web/icon-*.png
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
